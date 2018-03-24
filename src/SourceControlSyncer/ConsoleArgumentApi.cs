@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using PowerArgs;
 using Serilog;
+using SourceControlSyncer.SourceControlProviders;
+using SourceControlSyncer.SourceControls;
 
 namespace SourceControlSyncer
 {
@@ -12,7 +14,7 @@ namespace SourceControlSyncer
             .WriteTo.Console()
             .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day, fileSizeLimitBytes: 838860800, rollOnFileSizeLimit: true)
             .CreateLogger();
-
+        
         [HelpHook, ArgShortcut("-?"), ArgDescription("Shows the help")]
         public bool Help { get; set; }
         
@@ -34,7 +36,7 @@ namespace SourceControlSyncer
 
                 sourceControlProvider.EnsureRepositoriesSync(repos, args.RepositoryPathTemplate, args.BranchWhitelist);
                 
-                Logger.Information("Process took {TotalMs}ms ({Min}:{Sec} mm:ss)", stopwatch.Result.TotalMilliseconds, stopwatch.Result.Minutes, stopwatch.Result.Seconds);
+                Logger.Information("Done! Process took {TotalMs}ms ({Min}:{Sec} mm:ss)", stopwatch.Result.TotalMilliseconds, stopwatch.Result.Minutes, stopwatch.Result.Seconds);
             }
         }
         
@@ -56,7 +58,7 @@ namespace SourceControlSyncer
 
                 sourceControlProvider.EnsureRepositoriesSync(repos, args.RepositoryPathTemplate, args.BranchWhitelist);
                 
-                Logger.Information("Process took {TotalMs}ms ({Min}:{Sec} mm:ss)", stopwatch.Result.TotalMilliseconds, stopwatch.Result.Minutes, stopwatch.Result.Seconds);
+                Logger.Information("Done! Process took {TotalMs}ms ({Min}:{Sec} mm:ss)", stopwatch.Result.TotalMilliseconds, stopwatch.Result.Minutes, stopwatch.Result.Seconds);
             }
         }
     }
@@ -96,7 +98,7 @@ namespace SourceControlSyncer
         [ArgDescription("Enables / Disables logging to the console (Errors will still be logged)")]
         public bool Silent { get; set; } = false;
 
-        [ArgDescription("A template to identify where the repository will / is stored"), ArgShortcut("-p")]
+        [ArgDescription("A template to identify where the repository will / is stored"), ArgShortcut("-dir")]
         public string RepositoryPathTemplate { get; set; }
         
         [ArgDescription("Provides a way to whitelist which repositories to sync"), ArgShortcut("-rw")]

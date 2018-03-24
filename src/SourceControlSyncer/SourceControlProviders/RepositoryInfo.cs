@@ -1,4 +1,4 @@
-﻿namespace SourceControlSyncer
+﻿namespace SourceControlSyncer.SourceControlProviders
 {
     public class RepositoryInfo
     {

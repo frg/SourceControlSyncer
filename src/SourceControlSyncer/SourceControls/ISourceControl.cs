@@ -1,6 +1,6 @@
-﻿namespace SourceControlSyncer
+﻿namespace SourceControlSyncer.SourceControls
 {
-    interface ISourceControl
+    internal interface ISourceControl
     {
         bool IsRepository(string direcctory);
         void CloneRepository(string repoUrl, string cloneToDir, string[] branches);

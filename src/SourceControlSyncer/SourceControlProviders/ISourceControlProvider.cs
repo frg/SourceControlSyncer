@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 
-namespace SourceControlSyncer
+namespace SourceControlSyncer.SourceControlProviders
 {
     // Bitbucket
     // Github
     // Local?
-    interface ISourceControlProvider
+    internal interface ISourceControlProvider
     {
         List<RepositoryInfo> FetchRepositories(string[] repositoriesWhitelist);
         void EnsureRepositoriesSync(List<RepositoryInfo> repositories, string pathTemplate, string[] branchesWhitelist);

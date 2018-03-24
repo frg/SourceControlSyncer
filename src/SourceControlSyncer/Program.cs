@@ -1,5 +1,4 @@
-﻿using System;
-using PowerArgs;
+﻿using PowerArgs;
 
 namespace SourceControlSyncer
 {

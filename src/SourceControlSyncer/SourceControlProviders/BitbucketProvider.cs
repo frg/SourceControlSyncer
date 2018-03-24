@@ -9,8 +9,9 @@ using LibGit2Sharp;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
+using SourceControlSyncer.SourceControls;
 
-namespace SourceControlSyncer
+namespace SourceControlSyncer.SourceControlProviders
 {
     public class BitbucketProvider : ISourceControlProvider
     {

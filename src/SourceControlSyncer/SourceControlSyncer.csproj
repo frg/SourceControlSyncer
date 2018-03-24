@@ -63,15 +63,16 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BitbucketProvider.cs" />
+    <Compile Include="SourceControlProviders\BitbucketProvider.cs" />
     <Compile Include="ConsoleArgumentApi.cs" />
-    <Compile Include="GithubProvider.cs" />
-    <Compile Include="GitSourceControl.cs" />
-    <Compile Include="ISourceControl.cs" />
-    <Compile Include="ISourceControlProvider.cs" />
+    <Compile Include="SourceControlProviders\GithubProvider.cs" />
+    <Compile Include="SourceControls\GitSourceControl.cs" />
+    <Compile Include="SourceControls\ISourceControl.cs" />
+    <Compile Include="SourceControlProviders\ISourceControlProvider.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RepositoryInfo.cs" />
+    <Compile Include="SourceControlProviders\RepositoryInfo.cs" />
+    <Compile Include="SourceControls\UserInfo.cs" />
     <Compile Include="StopwatchHelper.cs" />
     <Compile Include="StringTemplate.cs" />
   </ItemGroup>
