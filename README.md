@@ -1,9 +1,7 @@
 # SourceControlSyncer
-A console application written in c# to sync all your repositories from Github, Bitbucket Server etc. to your machine.
+A console application written in c# to clone all your repositories from Github, Bitbucket Server etc. to your machine.
 
 **NOTE: Any merge conflicts will be resolved by using the remote's changes**
-
-* This project will be converted to .NET Core as soon as a git library supports .NET Standard
 
 ## Console arguments
 
@@ -31,6 +29,7 @@ A console application written in c# to sync all your repositories from Github, B
 * Implement merge handling
 * Implement Bitbucket Cloud API
 * Refactor code to remove redundancies
+* Convert to .NET Core
 
 ## Usage
 `bitbucketserver 
