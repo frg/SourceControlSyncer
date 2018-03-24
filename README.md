@@ -31,6 +31,14 @@ A console application written in c# to sync all your repositories from Github, B
 * Refactor code to remove redundancies
 
 ## Usage
-`bitbucketserver -server "https://bitbucket.company.com" -username "tom.rodd" -password "bigwalrus35" -email "example@gmail.com" -branchwhitelist "develop,release"`
+`bitbucketserver 
+  -server "https://bitbucket.company.com" 
+  -username "tom.rodd" 
+  -password "bigwalrus35" 
+  -email "example@gmail.com" 
+  -branchwhitelist "develop,release"`
 
-`github -username "rainbowrider" -accesstoken "23gyae12146f7335087g0d96819c7dfdc409rc22" -email "example@gmail.com"`
+`github 
+  -username "rainbowrider" 
+  -accesstoken "23gyae12146f7335087g0d96819c7dfdc409rc22" 
+  -email "example@gmail.com"`
