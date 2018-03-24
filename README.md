@@ -1,5 +1,7 @@
 # SourceControlSyncer
-A console application written in c# to sync all your repositories from Github, Bitbucket Server etc. to your machine
+A console application written in c# to sync all your repositories from Github, Bitbucket Server etc. to your machine.
+
+**NOTE: Any merge conflicts will be resolved by using the remote's changes**
 
 ## Console arguments
 
@@ -22,6 +24,11 @@ A console application written in c# to sync all your repositories from Github, B
 * `-at|--AccessToken` The access token that will be used to authenticate with Github (scopes: "repo", "read:org")
 * `-u|--Username` The username that will be used to authenticate & interact with Github
 * `-e|--Email` The email that will be used with any source control signitures
+
+## TODO
+* Implement merge handling
+* Implement Bitbucket Cloud API
+* Refactor code to remove redundancies
 
 ## Usage
 `bitbucketserver -server "https://bitbucket.company.com" -username "tom.rodd" -password "bigwalrus35" -email "example@gmail.com" -branchwhitelist "develop,release"`
