@@ -21,7 +21,7 @@ namespace SourceControlSyncer
         {
             var userInfo = new UserInfo(args.Username, args.Email, args.Password);
             var sourceControl = new GitSourceControl(Logger, userInfo);
-            var sourceControlProvider = new BitbucketProvider(Logger, sourceControl, args.Server, args.Username, args.Password);
+            var sourceControlProvider = new BitbucketProvider(Logger, sourceControl, args.ServerUrl, args.Username, args.Password);
             
             using (var stopwatch = new StopwatchHelper())
             {
@@ -66,22 +66,22 @@ namespace SourceControlSyncer
         [ArgRequired(PromptIfMissing=true), ArgDescription("The access token that will be used to authenticate with Github (scopes: \"repo\", \"read:org\")")]
         public string AccessToken { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The username that will be used to authenticate with Github")]
+        [ArgRequired(PromptIfMissing=true), ArgDescription("The username that will be used to authenticate & interact with Github")]
         public string Username { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The wmail that will be used with any source control signitures")]
+        [ArgRequired(PromptIfMissing=true), ArgDescription("The email that will be used with any source control signitures")]
         public string Email { get; set; }
     }
 
     public class BitbucketArgs : BaseArgs
     {
         [ArgRequired(PromptIfMissing=true), ArgDescription("The Bitbucket Server that will be queried for repositories")]
-        public string Server { get; set; }
+        public string ServerUrl { get; set; }
 
         [ArgRequired(PromptIfMissing=true), ArgDescription("The username that will be used to authenticate with the Bitbucket Server")]
         public string Username { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The wmail that will be used with any source control signitures")]
+        [ArgRequired(PromptIfMissing=true), ArgDescription("The email that will be used with any source control signitures")]
         public string Email { get; set; }
 
         [ArgRequired(PromptIfMissing=true), ArgDescription("The password that will be used to authenticate you with Bitbucket Server")]
@@ -105,8 +105,8 @@ namespace SourceControlSyncer
         [ArgDescription("Provides a way to blacklist repositories from syncing")]
         public string[] RepositoryBlacklist { get; set; } = null;
 
-        [ArgDescription("Provides a way to whitelist which branches to sync (Default is \"develop\", \"master\", \"release\")")]
-        public string[] BranchWhitelist { get; set; } = { "develop", "master", "release" };
+        [ArgDescription("Provides a way to whitelist which branches to sync")]
+        public string[] BranchWhitelist { get; set; } = null;
 
         [ArgDescription("Provides a way to blacklist branches from syncing")]
         public string[] BrancheBlacklist { get; set; } = null;
