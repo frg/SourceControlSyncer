@@ -8,7 +8,7 @@ A console application written in c# to sync all your repositories from Github, B
 ### Generic
 
 * `-?|--help` Shows the help
-* `-p|--RepositoryPathTemplate` The path template the app will use to sync your individual repositories to
+* `-dir|--RepositoryPathTemplate` The path template the app will use to sync your individual repositories to
 * `-rw|--RepositoryWhitelist` Provides a way to whitelist which repositories to sync
 * `-bw|--BranchWhitelist` Provides a way to whitelist which branches to sync
 
