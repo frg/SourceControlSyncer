@@ -30,6 +30,7 @@ A console application written in c# to clone all your repositories from Github, 
 * Implement Bitbucket Cloud API
 * Refactor code to remove redundancies
 * Convert to .NET Core
+* Implement SSH functionality
 
 ## Usage
 `bitbucketserver 
