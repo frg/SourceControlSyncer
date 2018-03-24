@@ -13,7 +13,7 @@ namespace SourceControlSyncer
             .WriteTo.File("Logs/log.txt", rollingInterval: RollingInterval.Day, fileSizeLimitBytes: 838860800, rollOnFileSizeLimit: true)
             .CreateLogger();
 
-        [HelpHook, ArgShortcut("-?"), ArgDescription("Shows this help")]
+        [HelpHook, ArgShortcut("-?"), ArgDescription("Shows the help")]
         public bool Help { get; set; }
         
         [ArgActionMethod, ArgDescription("Syncs your Bitbucker Server repositories")]
@@ -63,28 +63,28 @@ namespace SourceControlSyncer
 
     public class GithubArgs : BaseArgs
     {
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The access token that will be used to authenticate with Github (scopes: \"repo\", \"read:org\")")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-at"), ArgDescription("The access token that will be used to authenticate with Github (scopes: \"repo\", \"read:org\")")]
         public string AccessToken { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The username that will be used to authenticate & interact with Github")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-u"), ArgDescription("The username that will be used to authenticate & interact with Github")]
         public string Username { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The email that will be used with any source control signitures")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-e"), ArgDescription("The email that will be used with any source control signitures")]
         public string Email { get; set; }
     }
 
     public class BitbucketArgs : BaseArgs
     {
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The Bitbucket Server that will be queried for repositories")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-url"), ArgDescription("The Bitbucket Server that will be queried for repositories")]
         public string ServerUrl { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The username that will be used to authenticate with the Bitbucket Server")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-u"), ArgDescription("The username that will be used to authenticate with the Bitbucket Server")]
         public string Username { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The email that will be used with any source control signitures")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-e"), ArgDescription("The email that will be used with any source control signitures")]
         public string Email { get; set; }
 
-        [ArgRequired(PromptIfMissing=true), ArgDescription("The password that will be used to authenticate you with Bitbucket Server")]
+        [ArgRequired(PromptIfMissing=true), ArgShortcut("-p"), ArgDescription("The password that will be used to authenticate you with Bitbucket Server")]
         public string Password { get; set; }
     }
 
@@ -96,16 +96,16 @@ namespace SourceControlSyncer
         [ArgDescription("Enables / Disables logging to the console (Errors will still be logged)")]
         public bool Silent { get; set; } = false;
 
-        [ArgDescription("A template to identify where the repository will / is stored")]
+        [ArgDescription("A template to identify where the repository will / is stored"), ArgShortcut("-p")]
         public string RepositoryPathTemplate { get; set; }
         
-        [ArgDescription("Provides a way to whitelist which repositories to sync")]
+        [ArgDescription("Provides a way to whitelist which repositories to sync"), ArgShortcut("-rw")]
         public string[] RepositoryWhitelist { get; set; } = null;
         
         [ArgDescription("Provides a way to blacklist repositories from syncing")]
         public string[] RepositoryBlacklist { get; set; } = null;
 
-        [ArgDescription("Provides a way to whitelist which branches to sync")]
+        [ArgDescription("Provides a way to whitelist which branches to sync"), ArgShortcut("-bw")]
         public string[] BranchWhitelist { get; set; } = null;
 
         [ArgDescription("Provides a way to blacklist branches from syncing")]
