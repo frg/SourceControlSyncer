@@ -34,7 +34,7 @@ A console application written in c# to sync all your repositories from Github, B
 
 ## Usage
 `bitbucketserver 
-  -server "https://bitbucket.company.com" 
+  -serverurl "https://bitbucket.company.com" 
   -username "tom.rodd" 
   -password "bigwalrus35" 
   -email "example@gmail.com" 
