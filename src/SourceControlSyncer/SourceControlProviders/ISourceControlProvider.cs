@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace SourceControlSyncer.SourceControlProviders
 {
@@ -7,8 +8,7 @@ namespace SourceControlSyncer.SourceControlProviders
     // Local?
     internal interface ISourceControlProvider
     {
-        List<RepositoryInfo> FetchRepositories(string[] repositoriesWhitelist);
-        void EnsureRepositoriesSync(List<RepositoryInfo> repositories, string pathTemplate, string[] branchesWhitelist);
-        void EnsureRepositorySync(RepositoryInfo repo, string pathTemplate, string[] branchesWhitelist);
+        Task<List<RepositoryInfo>> FetchRepositories(string[] reposMatchers);
+        Task EnsureRepositoriesSync(List<RepositoryInfo> repositories, string pathTemplate, string[] branchMatchers);
     }
 }

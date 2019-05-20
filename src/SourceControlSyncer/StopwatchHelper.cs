@@ -5,8 +5,8 @@ namespace SourceControlSyncer
 {
     public class StopwatchHelper : IDisposable
     {
-        private readonly Stopwatch _stopwatch = new Stopwatch();
         private readonly Action<TimeSpan> _callback;
+        private readonly Stopwatch _stopwatch = new Stopwatch();
 
         public StopwatchHelper()
         {
@@ -18,10 +18,7 @@ namespace SourceControlSyncer
             _callback = callback;
         }
 
-        public static StopwatchHelper Start(Action<TimeSpan> callback)
-        {
-            return new StopwatchHelper(callback);
-        }
+        public TimeSpan Result => _stopwatch.Elapsed;
 
         public void Dispose()
         {
@@ -29,6 +26,9 @@ namespace SourceControlSyncer
             _callback?.Invoke(Result);
         }
 
-        public TimeSpan Result => _stopwatch.Elapsed;
+        public static StopwatchHelper Start(Action<TimeSpan> callback)
+        {
+            return new StopwatchHelper(callback);
+        }
     }
 }

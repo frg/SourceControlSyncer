@@ -1,11 +1,14 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using LibGit2Sharp;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -15,19 +18,20 @@ namespace SourceControlSyncer.SourceControlProviders
 {
     public class BitbucketProvider : ISourceControlProvider
     {
-        private readonly ILogger _logger;
-        private readonly GitSourceControl _gitSourceControl;
-        private readonly string _bitbucketServerUrl;
-        private readonly string _username;
-        private readonly HttpClient _httpClient;
         private const string RestApiSuffix = "/rest/api/1.0";
         private const string ApiProjects = "/projects";
         private const string ApiRepositories = "/repos";
-        
+
         private const string ProviderName = "bitbucket";
         private const string DefaultRepoPathTemplate = "./repos/{ProviderName}/{Namespace}/{Slug}";
+        private readonly string _bitbucketServerUrl;
+        private readonly GitSourceControlAsync _gitSourceControl;
+        private readonly HttpClient _httpClient;
+        private readonly ILogger _logger;
+        private readonly string _username;
 
-        public BitbucketProvider(ILogger logger, GitSourceControl gitSourceControl, string bitbucketServerUrl, string username, string password)
+        public BitbucketProvider(ILogger logger, GitSourceControlAsync gitSourceControl, string bitbucketServerUrl,
+            string username, string password)
         {
             _logger = logger;
             _gitSourceControl = gitSourceControl;
@@ -36,11 +40,12 @@ namespace SourceControlSyncer.SourceControlProviders
 
             _httpClient = new HttpClient();
 
-            var basicAuthHeaderValue = new AuthenticationHeaderValue("Basic", Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}")));
+            var basicAuthHeaderValue = new AuthenticationHeaderValue("Basic",
+                Convert.ToBase64String(Encoding.ASCII.GetBytes($"{username}:{password}")));
             _httpClient.DefaultRequestHeaders.Authorization = basicAuthHeaderValue;
         }
 
-        public List<RepositoryInfo> FetchRepositories(string[] repositoriesWhitelist = null)
+        public async Task<List<RepositoryInfo>> FetchRepositories(string[] reposMatchers)
         {
             _logger.Debug("Getting projects for username {Username}...", _username);
 
@@ -48,38 +53,68 @@ namespace SourceControlSyncer.SourceControlProviders
 
             _logger.Debug("Found {Count} projects...", projects.Count);
 
-            var list = new List<RepositoryInfo>();
+            // Initiate all the API requests
+            var concurrentBag = new ConcurrentBag<RepositoryInfo>();
             foreach (var project in projects)
             {
-                _logger.Debug("Getting repositories for project {Name}...", project.Name);
+                await Task.Run(async () =>
+                {
+                    _logger.Debug("Getting repositories for project {ProjectName}", project.Name);
+                    var repos = await GetRepositories(project.Key);
+                    _logger.Debug("Found {Count} repositories for project {ProjectName}", repos.Count, project.Name);
 
-                var repos = GetRepositories(project.Key);
-
-                _logger.Debug("Found {Count} repositories...", repos.Count);
-
-                list.AddRange(repos);
+                    foreach (var repo in repos)
+                    {
+                        concurrentBag.Add(repo);
+                    }
+                });
             }
 
-            if (repositoriesWhitelist != null)
-                list = list.Where(r => repositoriesWhitelist.Any(x => x.Equals(r.Name, StringComparison.InvariantCultureIgnoreCase))).ToList();
+            var list = concurrentBag.ToList();
 
-            _logger.Information("Found {Count} repositories matching 1 of the following whitelists {RepositoriesWhitelist}...", list.Count, repositoriesWhitelist ?? new string[0]);
+            //list = FilterProjectsByMatchers(list, projectMatchers);
+            list = FilterRepositoriesByMatchers(list, reposMatchers);
+
+            _logger.Information(
+                "Found {Count} repositories matching 1 of the following matchers {RepositoriesMatchers}...",
+                list.Count, reposMatchers ?? new string[0]);
 
             return list;
         }
 
-        public void EnsureRepositoriesSync(List<RepositoryInfo> repositories, string pathTemplate = DefaultRepoPathTemplate, string[] branchesWhitelist = null)
+        private static List<RepositoryInfo> FilterRepositoriesByMatchers(List<RepositoryInfo> repositories, string[] reposMatchers)
         {
-            for (var index = 0; index < repositories.Count; index++)
+            if (reposMatchers != null && reposMatchers.Any())
             {
-                var repo = repositories[index];
+                var rgxReposMatchers = reposMatchers.Select(x =>
+                    new Regex(x, RegexOptions.Compiled | RegexOptions.IgnoreCase));
 
-                _logger.Information("Ensuring sync [{Index}/{Count}] repository {Slug}...", index + 1, repositories.Count, repo.Slug);
-                EnsureRepositorySync(repo, pathTemplate, branchesWhitelist);
+                repositories = repositories
+                    .Where(repo => rgxReposMatchers
+                        .Any(regex => regex.Matches(repo.Name).Count > 0))
+                    .ToList();
             }
+
+            return repositories;
         }
 
-        public void EnsureRepositorySync(RepositoryInfo repo, string pathTemplate = DefaultRepoPathTemplate, string[] branchesWhitelist = null)
+        public async Task EnsureRepositoriesSync(List<RepositoryInfo> repositories,
+            string pathTemplate, string[] branchMatchers)
+        {
+            // Order repositories by non repositories first
+            bool LocalRepositoriesFirst(RepositoryInfo repo) => _gitSourceControl.IsLocalRepository(GetRepositoryAbsolutePath(repo, pathTemplate));
+            repositories = repositories.OrderBy(LocalRepositoriesFirst).ToList();
+
+            var repositorySyncInfoList = repositories.Select(r => new RepositorySyncInfo
+            {
+                RemoteUrl = r.HttpHref,
+                LocalRepositoryDirectory = GetRepositoryAbsolutePath(r, pathTemplate)
+            });
+
+            await _gitSourceControl.SyncRepositories(repositorySyncInfoList, branchMatchers, new CancellationToken());
+        }
+
+        private static string GetRepositoryAbsolutePath(RepositoryInfo repo, string pathTemplate = DefaultRepoPathTemplate)
         {
             if (string.IsNullOrEmpty(pathTemplate))
                 pathTemplate = DefaultRepoPathTemplate;
@@ -91,60 +126,26 @@ namespace SourceControlSyncer.SourceControlProviders
                 {"Slug", repo.Slug.ToLowerInvariant()}
             });
 
-            var absoluteRepoPath = Path.GetFullPath(relativeRepoPath);
-
-            try
-            {
-                CloneOrUpdateRepository(absoluteRepoPath, relativeRepoPath, branchesWhitelist, repo);
-            }
-            catch (Exception ex)
-            {
-                _logger.Error(ex, "Something went wrong!");
-            }
+            return Path.GetFullPath(relativeRepoPath);
         }
 
-        private void CloneOrUpdateRepository(string absoluteRepoPath,
-            string relativeRepoPath, string[] branchesWhitelist, RepositoryInfo repo)
+        private async Task<List<RepositoryInfo>> GetRepositories(string projectKey)
         {
-            try
-            {
-                if (_gitSourceControl.IsRepository(absoluteRepoPath))
-                {
-                    _logger.Information("{Path} is already a repository. Attempting to update.", relativeRepoPath);
-                    _gitSourceControl.UpdateRepository(absoluteRepoPath, branchesWhitelist);
-                }
-                else
-                {
-                    _gitSourceControl.CloneRepository(repo.HttpHref, absoluteRepoPath, branchesWhitelist);
-                }
-            }
-            catch (LibGit2SharpException e)
-            {
-                // TODO: Fix possible infinite loop here
-                if (e.Message.ToLowerInvariant().Contains("failed to send request"))
-                {
-                    _logger.Information("{ExMessage}... Retrying", e.Message);
-                    CloneOrUpdateRepository(absoluteRepoPath, relativeRepoPath, branchesWhitelist, repo);
-                }
-            }
-        }
+            var req = new HttpRequestMessage(HttpMethod.Get,
+                $"{_bitbucketServerUrl}{RestApiSuffix}{ApiProjects}/{projectKey}{ApiRepositories}?limit=1000");
 
-        private List<RepositoryInfo> GetRepositories(string projectKey)
-        {
-            var req = new HttpRequestMessage(HttpMethod.Get, $"{_bitbucketServerUrl}{RestApiSuffix}{ApiProjects}/{projectKey}{ApiRepositories}");
-
-            using (var res = _httpClient.SendAsync(req).GetAwaiter().GetResult())
-            using (var content = res.Content)
+            using (var response = await _httpClient.SendAsync(req))
+            using (var content = response.Content)
             {
-                var data = content.ReadAsStringAsync().GetAwaiter().GetResult();
+                var data = await content.ReadAsStringAsync();
 
-                return ((JArray)JsonConvert.DeserializeObject<dynamic>(data).values)
+                return ((JArray) JsonConvert.DeserializeObject<dynamic>(data).values)
                     .Select(x => new RepositoryInfo(
-                        name: (string)x["name"],
-                        slug: (string)x["slug"],
-                        namespaceName: projectKey,
-                        httpHref: (string)x["links"]["clone"]
-                            .Where(y => string.Equals((string)y["name"], "http"))
+                        (string) x["name"],
+                        (string) x["slug"],
+                        projectKey,
+                        (string) x["links"]["clone"]
+                            .Where(y => string.Equals((string) y["name"], "http"))
                             .Select(y => y["href"])
                             .First())
                     ).ToList();
@@ -153,7 +154,8 @@ namespace SourceControlSyncer.SourceControlProviders
 
         private List<BitbucketProjectInfo> GetProjects()
         {
-            var req = new HttpRequestMessage(HttpMethod.Get, $"{_bitbucketServerUrl}{RestApiSuffix}{ApiProjects}");
+            var req = new HttpRequestMessage(HttpMethod.Get,
+                $"{_bitbucketServerUrl}{RestApiSuffix}{ApiProjects}?limit=1000");
 
             using (var res = _httpClient.SendAsync(req).GetAwaiter().GetResult())
             using (var content = res.Content)
@@ -161,28 +163,13 @@ namespace SourceControlSyncer.SourceControlProviders
                 var data = content.ReadAsStringAsync().GetAwaiter().GetResult();
 
                 // TODO: fix page limit
-                return ((JArray)JsonConvert.DeserializeObject<dynamic>(data).values)
+                return ((JArray) JsonConvert.DeserializeObject<dynamic>(data).values)
                     .Select(x => new BitbucketProjectInfo(
-                        key: (string)x["key"],
-                        name: (string)x["name"],
-                        href: (string)x["links"]["self"][0]["href"])
+                        (string) x["key"],
+                        (string) x["name"],
+                        (string) x["links"]["self"][0]["href"])
                     ).ToList();
             }
-        }
-
-    }
-
-    public class BitbucketProjectInfo
-    {
-        public string Key { get; }
-        public string Name { get; }
-        public string Href { get; }
-
-        public BitbucketProjectInfo(string key, string name, string href)
-        {
-            Key = key;
-            Name = name;
-            Href = href;
         }
     }
 }
