@@ -4,7 +4,6 @@ using PowerArgs;
 using Serilog;
 using SourceControlSyncer.SourceControlProviders;
 using SourceControlSyncer.SourceControls;
-using RepositoryInfo = SourceControlSyncer.SourceControlProviders.RepositoryInfo;
 
 namespace SourceControlSyncer
 {
@@ -25,13 +24,14 @@ namespace SourceControlSyncer
 
         [ArgActionMethod]
         [ArgDescription("Syncs your Bitbucket Server repositories")]
-        public void BitbucketServer(BitbucketArgs args)
+        public void BitbucketServer(BitbucketServerArgs args)
         {
             try
             {
                 var userInfo = new UserInfo(args.Username, args.Email, args.Password);
                 var sourceControl = new GitSourceControlAsync(Logger, userInfo);
-                var sourceControlProvider = new BitbucketProvider(Logger, sourceControl, args.ServerUrl, args.Username, args.Password);
+                var sourceControlProvider = new BitbucketServerProvider(Logger, sourceControl, args.ServerUrl,
+                    args.Username, args.Password);
 
                 using (var stopwatch = new StopwatchHelper())
                 {
@@ -47,9 +47,52 @@ namespace SourceControlSyncer
                     }
 
                     sourceControlProvider.EnsureRepositoriesSync(
-                        repos, 
-                        args.RepositoryPathTemplate,
-                        args.BranchMatchers)
+                            repos,
+                            args.RepositoryPathTemplate,
+                            args.BranchMatchers)
+                        .ConfigureAwait(false)
+                        .GetAwaiter()
+                        .GetResult();
+
+                    Logger.Information("Done! Process took {TotalMs}ms ({Min}:{Sec} mm:ss)",
+                        stopwatch.Result.TotalMilliseconds, stopwatch.Result.Minutes, stopwatch.Result.Seconds);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Error(ex, "There was an unhandled exception!");
+                Console.ReadLine();
+            }
+        }
+
+        [ArgActionMethod]
+        [ArgDescription("Syncs your Bitbucket Cloud repositories")]
+        public void BitbucketCloud(BitbucketCloudArgs args)
+        {
+            try
+            {
+                var userInfo = new UserInfo(args.Username, args.Email, args.Password);
+                var sourceControl = new GitSourceControlAsync(Logger, userInfo);
+                var sourceControlProvider = new BitbucketCloudProvider(Logger, sourceControl, args.AccountUsername,
+                    args.Username, args.Password);
+
+                using (var stopwatch = new StopwatchHelper())
+                {
+                    var repos = new List<RepositoryInfo>();
+                    using (var stopwatch2 = new StopwatchHelper())
+                    {
+                        repos.AddRange(sourceControlProvider.FetchRepositories(args.RepositoryMatchers)
+                            .ConfigureAwait(false)
+                            .GetAwaiter()
+                            .GetResult());
+                        Logger.Information("Fetching repositories took {TotalMs}ms ({Min}:{Sec} mm:ss)",
+                            stopwatch2.Result.TotalMilliseconds, stopwatch2.Result.Minutes, stopwatch2.Result.Seconds);
+                    }
+
+                    sourceControlProvider.EnsureRepositoriesSync(
+                            repos,
+                            args.RepositoryPathTemplate,
+                            args.BranchMatchers)
                         .ConfigureAwait(false)
                         .GetAwaiter()
                         .GetResult();
@@ -90,8 +133,8 @@ namespace SourceControlSyncer
                     }
 
                     sourceControlProvider.EnsureRepositoriesSync(repos,
-                        args.RepositoryPathTemplate,
-                        args.BranchMatchers)
+                            args.RepositoryPathTemplate,
+                            args.BranchMatchers)
                         .ConfigureAwait(false)
                         .GetAwaiter()
                         .GetResult();
@@ -127,12 +170,35 @@ namespace SourceControlSyncer
         public string Email { get; set; }
     }
 
-    public class BitbucketArgs : BaseArgs
+    public class BitbucketServerArgs : BaseArgs
     {
         [ArgRequired(PromptIfMissing = true)]
         [ArgShortcut("-url")]
         [ArgDescription("The Bitbucket Server that will be queried for repositories")]
         public string ServerUrl { get; set; }
+
+        [ArgRequired(PromptIfMissing = true)]
+        [ArgShortcut("-u")]
+        [ArgDescription("The username that will be used to authenticate with the Bitbucket Server")]
+        public string Username { get; set; }
+
+        [ArgRequired(PromptIfMissing = true)]
+        [ArgShortcut("-e")]
+        [ArgDescription("The email that will be used with any source control signatures")]
+        public string Email { get; set; }
+
+        [ArgRequired(PromptIfMissing = true)]
+        [ArgShortcut("-p")]
+        [ArgDescription("The password that will be used to authenticate you with Bitbucket Server")]
+        public string Password { get; set; }
+    }
+
+    public class BitbucketCloudArgs : BaseArgs
+    {
+        [ArgRequired(PromptIfMissing = true)]
+        [ArgShortcut("-au")]
+        [ArgDescription("The Bitbucket Cloud account that will be queried for repositories")]
+        public string AccountUsername { get; set; }
 
         [ArgRequired(PromptIfMissing = true)]
         [ArgShortcut("-u")]

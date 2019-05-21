@@ -17,7 +17,8 @@ namespace SourceControlSyncer.SourceControls
             _logger = logger;
         }
 
-        public async Task<SourceControlResult[]> SyncRepositories(IEnumerable<RepositorySyncInfo> repositorySyncInfoList,
+        public async Task<SourceControlResult[]> SyncRepositories(
+            IEnumerable<RepositorySyncInfo> repositorySyncInfoList,
             string[] branchMatchers,
             CancellationToken cancellationToken)
         {
@@ -35,7 +36,7 @@ namespace SourceControlSyncer.SourceControls
                     try
                     {
                         _logger.Information("Ensuring sync [{Index}/{Count}] repository {RemoteUrl}...", index,
-                        repositorySyncInfos.Count, repositorySyncInfo.RemoteUrl);
+                            repositorySyncInfos.Count, repositorySyncInfo.RemoteUrl);
                         return SyncRepository(repositorySyncInfo, branchMatchers);
                     }
                     finally

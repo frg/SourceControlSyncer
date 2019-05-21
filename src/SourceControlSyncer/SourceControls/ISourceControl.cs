@@ -26,10 +26,26 @@ namespace SourceControlSyncer.SourceControls
 
     internal static class SourceControlResultFactory
     {
-        public static SourceControlResult MakeSuccessful => new SourceControlResult { IsSuccessful = true };
-        public static SourceControlResult MakeFailure(IEnumerable<SourceControlResultError> errors = null) => new SourceControlResult { IsSuccessful = false, Errors = errors };
-        public static SourceControlResult MakeFailure(SourceControlResultError error = null) => new SourceControlResult { IsSuccessful = false, Errors = new List<SourceControlResultError> { error } };
-        public static SourceControlResult MakeFailure(string message = null) => new SourceControlResult { IsSuccessful = false, Errors = new List<SourceControlResultError> { new SourceControlResultError{Message = message} } };
+        public static SourceControlResult MakeSuccessful => new SourceControlResult {IsSuccessful = true};
+
+        public static SourceControlResult MakeFailure(IEnumerable<SourceControlResultError> errors = null)
+        {
+            return new SourceControlResult {IsSuccessful = false, Errors = errors};
+        }
+
+        public static SourceControlResult MakeFailure(SourceControlResultError error = null)
+        {
+            return new SourceControlResult {IsSuccessful = false, Errors = new List<SourceControlResultError> {error}};
+        }
+
+        public static SourceControlResult MakeFailure(string message = null)
+        {
+            return new SourceControlResult
+            {
+                IsSuccessful = false,
+                Errors = new List<SourceControlResultError> {new SourceControlResultError {Message = message}}
+            };
+        }
     }
 
     public class SourceControlResult
@@ -37,6 +53,7 @@ namespace SourceControlSyncer.SourceControls
         private IEnumerable<SourceControlResultError> _errors = new List<SourceControlResultError>();
 
         public bool IsSuccessful { get; set; }
+
         public IEnumerable<SourceControlResultError> Errors
         {
             get => _errors;

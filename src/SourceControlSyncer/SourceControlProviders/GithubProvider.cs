@@ -15,14 +15,15 @@ namespace SourceControlSyncer.SourceControlProviders
     public class GithubProvider : ISourceControlProvider
     {
         private const string ProviderName = "github";
-        private const string DefaultRepoPathTemplate = "./repos/{ProviderName}/{Namespace}/{Slug}";
+        private const string DefaultRepoPathTemplate = "./source/{ProviderName}/{Namespace}/{Slug}";
         private readonly string _accessToken;
         private readonly GitSourceControlAsync _gitSourceControl;
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
         private readonly string _username;
 
-        public GithubProvider(ILogger logger, GitSourceControlAsync gitSourceControl, string username, string accessToken)
+        public GithubProvider(ILogger logger, GitSourceControlAsync gitSourceControl, string username,
+            string accessToken)
         {
             _logger = logger;
             _gitSourceControl = gitSourceControl;
@@ -58,7 +59,11 @@ namespace SourceControlSyncer.SourceControlProviders
             string[] branchMatchers)
         {
             // Order repositories by non repositories first
-            bool LocalRepositoriesFirst(RepositoryInfo repo) => _gitSourceControl.IsLocalRepository(GetRepositoryAbsolutePath(repo, pathTemplate));
+            bool LocalRepositoriesFirst(RepositoryInfo repo)
+            {
+                return _gitSourceControl.IsLocalRepository(GetRepositoryAbsolutePath(repo, pathTemplate));
+            }
+
             repositories = repositories.OrderBy(LocalRepositoriesFirst).ToList();
 
             var repositorySyncInfoList = repositories.Select(r => new RepositorySyncInfo
@@ -70,7 +75,8 @@ namespace SourceControlSyncer.SourceControlProviders
             await _gitSourceControl.SyncRepositories(repositorySyncInfoList, branchMatchers, new CancellationToken());
         }
 
-        private static string GetRepositoryAbsolutePath(RepositoryInfo repo, string pathTemplate = DefaultRepoPathTemplate)
+        private static string GetRepositoryAbsolutePath(RepositoryInfo repo,
+            string pathTemplate = DefaultRepoPathTemplate)
         {
             if (string.IsNullOrEmpty(pathTemplate))
                 pathTemplate = DefaultRepoPathTemplate;

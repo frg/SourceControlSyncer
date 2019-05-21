@@ -16,21 +16,23 @@ using SourceControlSyncer.SourceControls;
 
 namespace SourceControlSyncer.SourceControlProviders
 {
-    public class BitbucketProvider : ISourceControlProvider
+    public class BitbucketServerProvider : ISourceControlProvider
     {
         private const string RestApiSuffix = "/rest/api/1.0";
         private const string ApiProjects = "/projects";
         private const string ApiRepositories = "/repos";
 
         private const string ProviderName = "bitbucket";
-        private const string DefaultRepoPathTemplate = "./repos/{ProviderName}/{Namespace}/{Slug}";
+        private const string ProviderType = "server";
+        private const string DefaultRepoPathTemplate = "./source/{ProviderName}/{ProviderType}/{Namespace}/{Slug}";
         private readonly string _bitbucketServerUrl;
         private readonly GitSourceControlAsync _gitSourceControl;
         private readonly HttpClient _httpClient;
         private readonly ILogger _logger;
         private readonly string _username;
 
-        public BitbucketProvider(ILogger logger, GitSourceControlAsync gitSourceControl, string bitbucketServerUrl,
+        public BitbucketServerProvider(ILogger logger, GitSourceControlAsync gitSourceControl,
+            string bitbucketServerUrl,
             string username, string password)
         {
             _logger = logger;
@@ -72,7 +74,6 @@ namespace SourceControlSyncer.SourceControlProviders
 
             var list = concurrentBag.ToList();
 
-            //list = FilterProjectsByMatchers(list, projectMatchers);
             list = FilterRepositoriesByMatchers(list, reposMatchers);
 
             _logger.Information(
@@ -82,7 +83,28 @@ namespace SourceControlSyncer.SourceControlProviders
             return list;
         }
 
-        private static List<RepositoryInfo> FilterRepositoriesByMatchers(List<RepositoryInfo> repositories, string[] reposMatchers)
+        public async Task EnsureRepositoriesSync(List<RepositoryInfo> repositories,
+            string pathTemplate, string[] branchMatchers)
+        {
+            // Order repositories by non repositories first
+            bool LocalRepositoriesFirst(RepositoryInfo repo)
+            {
+                return _gitSourceControl.IsLocalRepository(GetRepositoryAbsolutePath(repo, pathTemplate));
+            }
+
+            repositories = repositories.OrderBy(LocalRepositoriesFirst).ToList();
+
+            var repositorySyncInfoList = repositories.Select(r => new RepositorySyncInfo
+            {
+                RemoteUrl = r.HttpHref,
+                LocalRepositoryDirectory = GetRepositoryAbsolutePath(r, pathTemplate)
+            });
+
+            await _gitSourceControl.SyncRepositories(repositorySyncInfoList, branchMatchers, new CancellationToken());
+        }
+
+        private static List<RepositoryInfo> FilterRepositoriesByMatchers(List<RepositoryInfo> repositories,
+            string[] reposMatchers)
         {
             if (reposMatchers != null && reposMatchers.Any())
             {
@@ -98,23 +120,8 @@ namespace SourceControlSyncer.SourceControlProviders
             return repositories;
         }
 
-        public async Task EnsureRepositoriesSync(List<RepositoryInfo> repositories,
-            string pathTemplate, string[] branchMatchers)
-        {
-            // Order repositories by non repositories first
-            bool LocalRepositoriesFirst(RepositoryInfo repo) => _gitSourceControl.IsLocalRepository(GetRepositoryAbsolutePath(repo, pathTemplate));
-            repositories = repositories.OrderBy(LocalRepositoriesFirst).ToList();
-
-            var repositorySyncInfoList = repositories.Select(r => new RepositorySyncInfo
-            {
-                RemoteUrl = r.HttpHref,
-                LocalRepositoryDirectory = GetRepositoryAbsolutePath(r, pathTemplate)
-            });
-
-            await _gitSourceControl.SyncRepositories(repositorySyncInfoList, branchMatchers, new CancellationToken());
-        }
-
-        private static string GetRepositoryAbsolutePath(RepositoryInfo repo, string pathTemplate = DefaultRepoPathTemplate)
+        private static string GetRepositoryAbsolutePath(RepositoryInfo repo,
+            string pathTemplate = DefaultRepoPathTemplate)
         {
             if (string.IsNullOrEmpty(pathTemplate))
                 pathTemplate = DefaultRepoPathTemplate;
@@ -122,6 +129,7 @@ namespace SourceControlSyncer.SourceControlProviders
             var relativeRepoPath = StringTemplate.Compile(pathTemplate, new Dictionary<string, string>
             {
                 {"ProviderName", ProviderName},
+                {"ProviderType", ProviderType},
                 {"Namespace", repo.Namespace.ToLowerInvariant()},
                 {"Slug", repo.Slug.ToLowerInvariant()}
             });

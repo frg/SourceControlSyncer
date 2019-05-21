@@ -64,7 +64,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="SourceControlProviders\BitbucketProjectInfo.cs" />
-    <Compile Include="SourceControlProviders\BitbucketProvider.cs" />
+    <Compile Include="SourceControlProviders\BitbucketCloudProvider.cs" />
+    <Compile Include="SourceControlProviders\BitbucketServerProvider.cs" />
     <Compile Include="ConsoleArgumentApi.cs" />
     <Compile Include="SourceControlProviders\GithubProvider.cs" />
     <Compile Include="SourceControls\GitSourceControl.cs" />

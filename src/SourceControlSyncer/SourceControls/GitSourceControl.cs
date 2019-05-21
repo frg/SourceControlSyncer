@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using LibGit2Sharp;
-using LibGit2Sharp.Handlers;
 using PowerArgs;
 using Serilog;
 
@@ -21,7 +20,7 @@ namespace SourceControlSyncer.SourceControls
             _userInfo = userInfo;
 
             _credentials = new UsernamePasswordCredentials
-            { Username = _userInfo.Username, Password = _userInfo.Password };
+                {Username = _userInfo.Username, Password = _userInfo.Password};
         }
 
         public bool IsLocalRepository(string directory)
@@ -45,7 +44,8 @@ namespace SourceControlSyncer.SourceControls
             {
                 if (IsLocalRepository(repositorySyncInfo.LocalRepositoryDirectory))
                 {
-                    _logger.Information("{Path} is already a repository. Attempting to update.", repositorySyncInfo.LocalRepositoryDirectory);
+                    _logger.Information("{Path} is already a repository. Attempting to update.",
+                        repositorySyncInfo.LocalRepositoryDirectory);
                     return SyncLocalRepository(repositorySyncInfo.LocalRepositoryDirectory, branchMatchers);
                 }
 
@@ -70,7 +70,8 @@ namespace SourceControlSyncer.SourceControls
             }
         }
 
-        public SourceControlResult SyncRemoteRepository(RepositorySyncInfo repositorySyncInfo, string[] branchMatchers = null)
+        public SourceControlResult SyncRemoteRepository(RepositorySyncInfo repositorySyncInfo,
+            string[] branchMatchers = null)
         {
             branchMatchers = branchMatchers ?? new string[0];
             var transferLastUpdate = DateTime.UtcNow;
@@ -82,7 +83,7 @@ namespace SourceControlSyncer.SourceControls
                 {
                     transferLastUpdate = DateTime.UtcNow;
                     _logger.Debug(
-                        $"Transfer progress {100 * ((double)progress.ReceivedObjects / progress.TotalObjects):0.##}%, Objects: {progress.ReceivedObjects} of {progress.TotalObjects}, Bytes: {progress.ReceivedBytes}");
+                        $"Transfer progress {100 * ((double) progress.ReceivedObjects / progress.TotalObjects):0.##}%, Objects: {progress.ReceivedObjects} of {progress.TotalObjects}, Bytes: {progress.ReceivedBytes}");
                 }
 
                 return true;
@@ -96,18 +97,19 @@ namespace SourceControlSyncer.SourceControls
                 if (DateTime.UtcNow > checkoutLastUpdate.AddSeconds(5))
                 {
                     checkoutLastUpdate = DateTime.UtcNow;
-                    _logger.Debug($"Checkout progress {100 * ((double)completedSteps / totalSteps):0.##}%");
+                    _logger.Debug($"Checkout progress {100 * ((double) completedSteps / totalSteps):0.##}%");
                 }
             }
 
             try
             {
-                Repository.Clone(repositorySyncInfo.RemoteUrl, repositorySyncInfo.LocalRepositoryDirectory, new CloneOptions
-                {
-                    CredentialsProvider = (url, user, cred) => _credentials,
-                    OnTransferProgress = OnTransferProgress,
-                    OnCheckoutProgress = OnCheckoutProgress
-                });
+                Repository.Clone(repositorySyncInfo.RemoteUrl, repositorySyncInfo.LocalRepositoryDirectory,
+                    new CloneOptions
+                    {
+                        CredentialsProvider = (url, user, cred) => _credentials,
+                        OnTransferProgress = OnTransferProgress,
+                        OnCheckoutProgress = OnCheckoutProgress
+                    });
             }
             catch (Exception ex)
             {
@@ -126,7 +128,7 @@ namespace SourceControlSyncer.SourceControls
             using (var repo = new Repository(repoDir))
             {
                 FetchFromAllRemotes(repo);
-                
+
                 var branchesToProcess = FilterBranchesByMatchers(repo.Branches.ToList(), branchMatchers);
                 var branchesToProcessInitialCount = branchesToProcess.Count;
                 var branchesToProcessCurrentCount = 0;
@@ -149,7 +151,6 @@ namespace SourceControlSyncer.SourceControls
                     }
                 };
 
-
                 var localTrackingBranches = branchesToProcess
                     .Where(branch => !branch.IsRemote)
                     .Where(branch => !branch.FriendlyName.EndsWith("/HEAD"))
@@ -160,31 +161,35 @@ namespace SourceControlSyncer.SourceControls
                     .Where(branch => branch.IsRemote)
                     .Where(branch => !branch.FriendlyName.EndsWith("/HEAD"))
                     // Where local branch tracking this remote does not exist
-                    .Where(branch => !localTrackingBranches.Any(x => x.TrackedBranch.FriendlyName.Equals(branch.FriendlyName)))
+                    .Where(branch =>
+                        !localTrackingBranches.Any(x => x.TrackedBranch.FriendlyName.Equals(branch.FriendlyName)))
                     .ToList();
 
-                // Checkout and pull branches that do not have local branches that track remotes
+                // Checkout branches that do not have local branches that track remotes
                 branchesToProcess = branchesToProcess.Except(remoteBranches).ToList();
                 foreach (var branch in remoteBranches)
                 {
                     branchesToProcessCurrentCount++;
-                    var localBranchName = branch.UpstreamBranchCanonicalName.Substring("refs/heads/".Length, branch.UpstreamBranchCanonicalName.Length - "refs/heads/".Length);
-                    
+                    var localBranchName = branch.UpstreamBranchCanonicalName.Substring("refs/heads/".Length,
+                        branch.UpstreamBranchCanonicalName.Length - "refs/heads/".Length);
+
                     _logger.Information("Branch {BranchName} does not exist locally. Creating", localBranchName);
                     var localBranch = repo.CreateBranch(localBranchName, branch.Tip);
                     repo.Branches.Update(localBranch, b => b.TrackedBranch = branch.CanonicalName);
 
                     _logger.Information("Checking out [{Index}/{Count}] {BranchName}...", branchesToProcessCurrentCount,
                         branchesToProcessInitialCount, localBranch.FriendlyName);
-                    Commands.Checkout(repo, localBranch, new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force });
+                    Commands.Checkout(repo, localBranch,
+                        new CheckoutOptions {CheckoutModifiers = CheckoutModifiers.Force});
                 }
 
-                // Pull local branches that track remotes
+                // Checkout and pull local branches that track remotes
                 branchesToProcess = branchesToProcess.Except(localTrackingBranches).ToList();
                 foreach (var branch in localTrackingBranches)
                 {
-                    _logger.Information("Checking out [{Index}/{Count}] {BranchName}...", branchesToProcessCurrentCount, branchesToProcessInitialCount, branch.FriendlyName);
-                    var checkoutOptions = new CheckoutOptions { CheckoutModifiers = CheckoutModifiers.Force };
+                    _logger.Information("Checking out [{Index}/{Count}] {BranchName}...", branchesToProcessCurrentCount,
+                        branchesToProcessInitialCount, branch.FriendlyName);
+                    var checkoutOptions = new CheckoutOptions {CheckoutModifiers = CheckoutModifiers.Force};
                     Commands.Checkout(repo, branch, checkoutOptions);
 
                     _logger.Information("Pulling {BranchName}...", branch.FriendlyName);
@@ -193,7 +198,8 @@ namespace SourceControlSyncer.SourceControls
 
                 if (branchesToProcess.Any())
                 {
-                    _logger.Warning("Found {Count} branches that weren't processed. {Branches}", branchesToProcess.Count, string.Join(",", branchesToProcess.Select(x => x.FriendlyName)));
+                    _logger.Warning("Found {Count} branches that weren't processed. {Branches}",
+                        branchesToProcess.Count, string.Join(",", branchesToProcess.Select(x => x.FriendlyName)));
                 }
             }
 
@@ -238,14 +244,20 @@ namespace SourceControlSyncer.SourceControls
             repo.Branches.ForEach(branch =>
             {
                 var exists = localBranchNames.TryGetValue(branch, out var localBranchName);
-                if (!exists) _logger.Error("Pre computed local branch name for branch {BranchName} was not found!", branch.FriendlyName);
-                isRemoteBranches.Add(branch, !branch.IsRemote && branch.FriendlyName.Equals(localBranchName, StringComparison.OrdinalIgnoreCase));
+                if (!exists)
+                    _logger.Error("Pre computed local branch name for branch {BranchName} was not found!",
+                        branch.FriendlyName);
+                isRemoteBranches.Add(branch,
+                    !branch.IsRemote &&
+                    branch.FriendlyName.Equals(localBranchName, StringComparison.OrdinalIgnoreCase));
             });
 
             return branch =>
             {
                 var exists = isRemoteBranches.TryGetValue(branch, out var isRemote);
-                if (!exists) _logger.Error("Pre computed is remote branch for branch {BranchName} was not found!", branch.FriendlyName);
+                if (!exists)
+                    _logger.Error("Pre computed is remote branch for branch {BranchName} was not found!",
+                        branch.FriendlyName);
                 return isRemote;
             };
         }
@@ -270,7 +282,9 @@ namespace SourceControlSyncer.SourceControls
                         .Any(regex =>
                         {
                             var exists = localBranchNames.TryGetValue(branch, out var localBranchName);
-                            if (!exists) _logger.Error("Pre computed local branch name for branch {BranchName} was not found!", branch.FriendlyName);
+                            if (!exists)
+                                _logger.Error("Pre computed local branch name for branch {BranchName} was not found!",
+                                    branch.FriendlyName);
                             return regex.Matches(localBranchName).Count > 0;
                         }))
                     .ToList();
