@@ -1,4 +1,6 @@
 # SourceControlSyncer
+>This project has been archived in favor of a simpler solution using SSH and bash, [here](https://gist.github.com/frg/21ad912681a15cc693b32190dce88bc7)
+
 A console application written in c# to clone all your repositories from Github, Bitbucket Server etc. to your machine.
 
 **NOTE: Any merge conflicts will be resolved by using the remote's changes**
